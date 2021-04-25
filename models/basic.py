@@ -18,11 +18,10 @@ class ConvBN(nn.Sequential):
                  kernel_size=3, stride=1, groups=1):
         assert kernel_size % 2 == 1 
         padding = (kernel_size - 1) // 2
-        super(ConvBNActi, self).__init__(
+        super(ConvBN, self).__init__(
             nn.Conv2d(in_planes, out_planes, kernel_size, stride, padding, groups=groups, bias=False),
             nn.BatchNorm2d(out_planes),
         )
-
 
 
 def acti_factory(acti_type='relu', **kwargs):

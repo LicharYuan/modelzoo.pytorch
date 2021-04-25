@@ -3,8 +3,12 @@ import os
 sys.path.append(os.getcwd())
 from models.basic import *
 from models.blocks import *
-
+from models.models import *
 
 if __name__ == "__main__":
-    a = ConvBNReLU(10, 20)
-    b = FusedConv()
+    x = torch.ones(1, 3, 224, 224)
+    net = resnet34()
+    y = net(x)
+    print(y.shape)
+    
+    

@@ -1,7 +1,8 @@
 import torch
 import torch.nn as nn
-from models.basic import ConvBNReLU6, ConvBN
-
+from models.basic import (ConvBNReLU6, ConvBN, _scale_filters, 
+                          truncated_normal_, ConvBNReLU, acti_factory,
+                          pool_factory)
 class FusedConv(nn.Module):
     """fused mb conv, replace expand conv to normal conv"""
     def __init__(self, inc, outc, kernel_size=3, stride=1, expansion=8, use_se=False, residual=True):
@@ -18,7 +19,6 @@ class FusedConv(nn.Module):
             self.se = SELayer()
         self.proj = ConvBN(hidden, outc, 1)
         
-    
     def forward(self, x):
         inputs = x
         x = self.expand(x)
@@ -68,7 +68,6 @@ class InvertedBottleNeck(nn.Module):
         # using diff initialize
         stddev = (2.0 / self._ks**2)**0.5 / .87962566103423978
         truncated_normal_(self.dwconv.weight, std=stddev)
-        # nn.init.normal_(self.dwconv.weight, std=stddev)
 
     def forward(self, x):
         inputs = x
@@ -79,3 +78,36 @@ class InvertedBottleNeck(nn.Module):
             return x+inputs
         else:
             return x
+
+class ResNetBasic(nn.Module):
+    def __init__(self, inc, outc, kernel_size=3, stride=1, proj=True):
+        super().__init__()
+        self.conv1 = ConvBNReLU(inc, outc, kernel_size, stride)
+        self.conv2 = ConvBN(outc, outc, kernel_size, 1)
+        self.relu = acti_factory('relu', inplace=True)
+        self._with_proj = proj
+        if proj:
+            self.proj_conv = ConvBN(inc, outc, 1, stride)
+
+    def forward(self, x):
+        inputs = x
+        x = self.conv1(x)
+        x = self.conv2(x)
+        ouputs = x + self.proj_conv(inputs) if self._with_proj else x + inputs
+        return self.relu(ouputs)
+
+
+class ResNetStem3x3(nn.Module):
+    def __init__(self, inc, outc):
+        super().__init__()
+        self.conv1 = ConvBNReLU(inc, outc, stride=2)
+        self.conv2 = ConvBNReLU(outc, outc)
+        self.conv3 = ConvBNReLU(outc, outc)
+        self.pool = pool_factory('max', stride=2)
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x = self.conv2(x)
+        x = self.conv3(x)
+        x = self.pool(x)
+        return x
