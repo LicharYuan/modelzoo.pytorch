@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from models.basic import (ConvBNReLU6, ConvBN, _scale_filters, 
+from .basic import (ConvBNReLU6, ConvBN, _scale_filters, 
                           truncated_normal_, ConvBNReLU, acti_factory,
                           pool_factory)
 class FusedConv(nn.Module):
