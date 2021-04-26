@@ -5,6 +5,7 @@ from .stages import *
 class BaseNet(nn.Module):
     def __init__(self, op_list, width, strides, extras=None, inc=3):
         # op_list, width build body(including stem and stages)
+        # block_list: [[ABC], [ABC], [ABC]] depth_i = len(block_list_i)
         assert len(op_list) == len(width), "config error"
         super().__init__()
         self.op_list = block
@@ -42,6 +43,7 @@ class BaseNet(nn.Module):
 
 class StageNet(nn.Module):
     def __init__(self, stage_list, width, depth, strides, stem_func, extras=None, stem_inc=3, stem_outc=32):
+        # stage_list = [stage, stage, stage]
         assert len(stage_list) == len(width) == len(depth) == len(strides)
         super().__init__()
         self.width = width
@@ -62,13 +64,9 @@ class StageNet(nn.Module):
 
     def _build_stages(self, inc):
         self.stages = nn.ModuleList()
-        for i, (stage, outc, stride) in enumerate(zip(self.stage_list, self.width, self.strides)):
-            _stages = []
-            for j in range(self.depth[i]):
-                stride = stride if j==0 else 1
-                _stages.append(stage(inc, outc, stride=stride))
-                inc = outc
-            _stages = nn.Sequential(*_stages)
+        for i, (stage, outc, stride, depth) in enumerate(zip(self.stage_list, self.width, self.strides, self.depth)):
+            _stages = stage(inc, outc, stride=stride, depth=depth)
+            inc = outc
             self.stages.append(_stages)
 
     def _build_extras(self, extras):
@@ -90,7 +88,7 @@ class ResNet(StageNet):
         "34": [ResNet18Stage3x3, ResNet18Stage3x3, ResNet18Stage3x3, ResNet18Stage3x3]
     }
     WIDTH = {
-        "34": [32, 64, 128, 256]
+        "34": [64, 128, 256, 512]
     }
     DEPTH = {
         "34": [3, 4, 6, 3]
@@ -99,15 +97,15 @@ class ResNet(StageNet):
         "34": [1, 2, 2, 2]
     }
 
-    def __init__(self, net_type, stem_func, extras=None):
+    def __init__(self, net_type, stem_func, stem_outc=64, extras=None):
         width = self.WIDTH[net_type]
         stage_list = self.STAGE[net_type]
         depth = self.DEPTH[net_type]
         stride = self.STRIDE[net_type]
-        super().__init__(stage_list, width, depth, stride, stem_func, extras)
+        super().__init__(stage_list, width, depth, stride, stem_func, extras, stem_outc=stem_outc)
 
 def resnet34(extras=None):
-    return ResNet("34", ResNetStem3x3, extras)
+    return ResNet("34", ResNetStem3x3, extras=extras)
 
 
 

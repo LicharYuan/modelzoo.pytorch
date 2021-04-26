@@ -17,7 +17,8 @@ class BaseStage(nn.Module):
         stage = []
         for i in range(self.depth):
             if i == 0:
-                stage.append(self.block_func(self.inc, self.outc, self.ks, self.stride, proj=True))
+                proj = self.inc != self.outc and self.stride!=1
+                stage.append(self.block_func(self.inc, self.outc, self.ks, self.stride, proj=proj))
             else:
                 stage.append(self.block_func(self.outc, self.outc, self.ks, 1, proj=False))
 
